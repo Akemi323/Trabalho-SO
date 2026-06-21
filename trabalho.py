@@ -103,6 +103,8 @@ def first_aloca(inicio, tamanho, pid, memoria):
     print(memoria.tab_particao)
 
 def verifica_espaco(memoria):
+    #tab_part [[pid, inicio, tamanho]]
+    #espaco [[inicio, tamanho]]
     espacos = []
     tab_part = memoria.tab_particao
     tab_part.sort(key=lambda x: x[1]) #ordenar pelos inicios para fazer as comparações
@@ -113,6 +115,12 @@ def verifica_espaco(memoria):
             espaco = tab_part[i][1] - (tab_part[i-1][1] + tab_part[i-1][2])
             if espaco != 0:
                 espacos.append([(tab_part[i-1][1] + tab_part[i-1][2]), espaco])
+    inicio_ultimo = tab_part[len(tab_part) - 1][1] + tab_part[len(tab_part) - 1][2]
+    i = inicio_ultimo
+    while i < memoria.tam and memoria.mem[i] == -1:
+        i += 1
+    if i != inicio_ultimo:
+        espacos.append([inicio_ultimo, i])
     return espacos
 
 def first_verifica_libera(pid, memoria):
@@ -217,7 +225,7 @@ def main():
         print(memoria.mem[:1000])
     elif estrategia == 'best':
         best(operacoes, memoria)
-        print(memoria.mem)
+        print(memoria.mem[:1000])
     elif estrategia == 'buddy':
         pass
     else:
