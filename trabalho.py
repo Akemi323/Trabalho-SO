@@ -1,4 +1,5 @@
 import sys
+import os
 
 class Memoria:
     def __init__(self , tam):
@@ -7,24 +8,23 @@ class Memoria:
         self.tab_particao = []
         self.mmu = MMU()
 
-    def adicionar_particao(self, pid, base, lim):
+    def adicionar_particao(self, pid: str, base: int, lim: int):
         self.tab_particao.append([pid, base, lim])
     
-    def remover_particao(self, pid):
+    def remover_particao(self, pid: str):
         for i in range(len(self.tab_particao)):
             if self.tab_particao[i][0] == pid:
-                self.tab_particoes.pop(i)
+                self.tab_particao.pop(i)
 
 class MMU:
     #def __init__(self, memoria, tab_particao, lista_processos):
     #    self.memoria = memoria
     #    self.tab_particao = tab_particao
     #    self.lista_processos = lista_processos
-    pass
         
     @staticmethod
     #sera que assim nao resolve? pq com o while acho que ia ficar muito maior o codigo
-    def traduz(pid, end_virtual, memoria):
+    def traduz(pid: str, end_virtual: int, memoria: Memoria):
         for particao in memoria.tab_particao:
             if particao[0] == pid:
                 base = particao[1]
@@ -35,13 +35,14 @@ class MMU:
                 return base + end_virtual
         
 class processo:
-    def __init__(self, pid, tamanho):
+    def __init__(self, pid: str, tamanho: int):
         self.PID = pid
         self.tamanho = tamanho
 
 
-def ler_arquivo(caminho):
+def ler_arquivo(caminho: str):
     '''
+    Função que lê o arquivo de entrada e retorna uma lista com as informações nele
     4 - Quant de processos
     p01;p02;p03;p04 - PID dos processos
     aloca p01 1000 
@@ -62,22 +63,31 @@ def ler_arquivo(caminho):
 
 
 def first(operacoes: list, memoria: Memoria):
+    logs = []
     for op in operacoes:
         print(op)
         if op[0] == 'aloca':
-            first_verifica_aloca(op[1], int(op[2]), memoria)
+            pid = op[1]
+            tam = int(op[2])
+            first_aloca(pid, tam, memoria)
+
+            particao = memoria.tab_particao[-1] #pega a ultima particao
+            inicio = particao[1]
+            fim = inicio + particao[2] - 1
+            logs.append(formata_saida('aloca', pid, inicio, fim))
         elif op[0] == 'acessa': 
             memoria.mmu.traduz(op[1], int(op[2]), memoria)
         else:
-            first_verifica_libera(op[1], memoria)
+            verifica_libera(op[1], memoria)
+    return logs
 
 
-def first_acessa(pid, end_virtual, memoria):
+def first_acessa(pid: str, end_virtual: int, memoria: Memoria):
     memoria.mmu.traduz(pid, end_virtual, memoria.trab_particao)
 
-def first_verifica_aloca(pid, tamanho, memoria):
+def first_aloca(pid: str, tamanho: int, memoria: Memoria):
     if not memoria.tab_particao:
-        first_aloca(0, tamanho, pid, memoria) # aloca no comeco
+        alocacao(0, tamanho, pid, memoria) # aloca no comeco
     else:
         espacos = verifica_espaco(memoria)
         print(pid)
@@ -90,19 +100,22 @@ def first_verifica_aloca(pid, tamanho, memoria):
             else:
                 i += 1
         if achou:
-            first_aloca(espacos[i][0], tamanho, pid, memoria) #aloca no espaco que achou
+            alocacao(espacos[i][0], tamanho, pid, memoria) #aloca no espaco que achou
         else:
             ultimo = (len(memoria.tab_particao) - 1)
             inicio = memoria.tab_particao[ultimo][1] + memoria.tab_particao[ultimo][2]
-            first_aloca(inicio, tamanho, pid, memoria) #aloca no final
+            alocacao(inicio, tamanho, pid, memoria) #aloca no final
             
-def first_aloca(inicio, tamanho, pid, memoria):  
+def alocacao(inicio: int, tamanho: int, pid: str, memoria: Memoria):  
+    '''
+    Função que aloca o processo na memória e atualiza a tabela de partição
+    '''
     for i in range(inicio, inicio + tamanho):
         memoria.mem[i] = pid
     memoria.adicionar_particao(pid, inicio, tamanho)
     print(memoria.tab_particao)
 
-def verifica_espaco(memoria):
+def verifica_espaco(memoria: Memoria):
     #tab_part [[pid, inicio, tamanho]]
     #espaco [[inicio, tamanho]]
     espacos = []
@@ -123,7 +136,7 @@ def verifica_espaco(memoria):
         espacos.append([inicio_ultimo, i])
     return espacos
 
-def first_verifica_libera(pid, memoria):
+def verifica_libera(pid: str, memoria: Memoria):
     i = 0
     achou = False
     while i < len(memoria.tab_particao) and not achou:
@@ -134,68 +147,68 @@ def first_verifica_libera(pid, memoria):
     if achou:
         first_libera(memoria, i)
 
-def first_libera(memoria, posicao):
+def first_libera(memoria: Memoria, posicao: int):
     for i in range (memoria.tab_particao[posicao][1], memoria.tab_particao[posicao][1] + memoria.tab_particao[posicao][2]):
         memoria.mem[i] = -1
     del memoria.tab_particao[posicao]
 
-def worst(operacoes, memoria):
+def worst(operacoes: list, memoria: Memoria):
     for op in operacoes:
         if op[0] == 'aloca':
-            verifica_worst_aloca(op[1], int(op[2]), memoria)
+            worst_aloca(op[1], int(op[2]), memoria)
         elif op[0] == 'acessa': 
             memoria.mmu.traduz(op[1], int(op[2]), memoria)
         else:
-            first_verifica_libera(op[1], memoria)
+            verifica_libera(op[1], memoria)
 
-def verifica_worst_aloca(pid, tamanho, memoria):
+def worst_aloca(pid: str, tamanho: int, memoria: Memoria):
     if not memoria.tab_particao:
-        first_aloca(0, tamanho, pid, memoria) #aloca no comeco
+        alocacao(0, tamanho, pid, memoria) #aloca no comeco
     else:
         espacos = verifica_espaco(memoria)
         espacos.sort(key=lambda x: x[1], reverse=True)
         print(espacos)
         if  espacos and tamanho <= espacos[0][1]:
-            first_aloca(espacos[0][0], tamanho, pid, memoria)
+            alocacao(espacos[0][0], tamanho, pid, memoria)
             #entra aqui
         else:
             #final
             ultimo = (len(memoria.tab_particao) - 1)
             inicio = memoria.tab_particao[ultimo][1] + memoria.tab_particao[ultimo][2]
-            first_aloca(inicio, tamanho, pid, memoria) #aloca no final
+            alocacao(inicio, tamanho, pid, memoria) #aloca no final
     
-def best(operacoes, memoria):
+def best(operacoes: list, memoria: Memoria):
     for op in operacoes:
         if op[0] == 'aloca':
-            aloca_best(op[1], int(op[2]), memoria)
+            best_aloca(op[1], int(op[2]), memoria)
         elif op[0] == 'acessa': 
             memoria.mmu.traduz(op[1], int(op[2]), memoria)
         else:
-            first_verifica_libera(op[1], memoria)
+            verifica_libera(op[1], memoria)
     # Aloca no menor espaço disponivel (frag externa)
     pass
 
-def aloca_best(pid, tamanho, memoria):
+def best_aloca(pid: str, tamanho: int, memoria: Memoria):
     if not memoria.tab_particao:
-        first_aloca(0, tamanho, pid, memoria) #aloca no comeco
+        alocacao(0, tamanho, pid, memoria) #aloca no comeco
     else:
         espacos = verifica_espaco(memoria)
         espacos.sort(key=lambda x: x[1])
         print(espacos)
         if  espacos and tamanho <= espacos[0][1]:
-            first_aloca(espacos[0][0], tamanho, pid, memoria)
+            alocacao(espacos[0][0], tamanho, pid, memoria)
             #entra aqui
         else:
             #final
             ultimo = (len(memoria.tab_particao) - 1)
             inicio = memoria.tab_particao[ultimo][1] + memoria.tab_particao[ultimo][2]
-            first_aloca(inicio, tamanho, pid, memoria) #aloca no final
+            alocacao(inicio, tamanho, pid, memoria) #aloca no final
 
 def buddy():
     # muita coisa
     pass
 
-def acessa_memoria(memoria, MMU, pid, end_virtual):
+def acessa_memoria(memoria: Memoria, MMU: MMU, pid: str, end_virtual: int):
     end_fisico = MMU.traduz(pid, end_virtual)
     if end_fisico is not None:
         conteudo = memoria.memoria[end_fisico]
@@ -203,8 +216,28 @@ def acessa_memoria(memoria, MMU, pid, end_virtual):
     else:
         print("Erro")
         
+def saida_arquivo(caminho: str, saida: list):
+    '''
+    alocacao p01 0 999
+    alocacao p02 1000 1999
+    alocacao p03 2000 2999
+    liberacao p02 1000 1999
+    alocacao p04 1000 1499
+    acesso p04 0 1000
+    '''
+    with open(caminho, 'w') as arq:
+        for linha in saida:
+            arq.write(linha + '\n')
+ 
+def formata_saida(operacao: str, pid: str, inicio: int, fim: int):
+    if operacao == 'aloca':
+        linha = f"alocacao {pid} {inicio} {fim}"
+    elif operacao == 'libera':
+        linha = f"liberacao {pid} {inicio} {fim}"
+    else:
+        linha = f"acesso {pid} {inicio} {fim}"
+    return linha
     
-
 def main():    
     caminho_entrada = sys.argv[1]
     estrategia = sys.argv[2]
@@ -216,9 +249,10 @@ def main():
     operacoes = arq [2:]
     
     memoria = Memoria(4096)
+    logs = []
     
     if estrategia == 'first':
-        first(operacoes, memoria)
+        logs = first(operacoes, memoria)
         print(memoria.mem[:1000])
     elif estrategia == 'worst':
         worst(operacoes, memoria)
@@ -238,6 +272,9 @@ def main():
     #Inicialização da memória RAM, dos processos e da tabela de partição
     #Tratamento de requisições - escrita no arquivo de log de saída
     #Encerramento da simulação' 
+
+    if logs:
+        saida_arquivo(caminho_saida, logs)
 
 if __name__ == '__main__':
     main()
