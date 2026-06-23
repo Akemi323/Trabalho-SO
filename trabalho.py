@@ -1,20 +1,29 @@
 import sys
 import os
+import math
 
 class Memoria:
-    def __init__(self , tam):
+    def __init__(self , tam, arquivo_saida):
         self.tam = tam
         self.mem = [0] * tam
         self.tab_particao = []
         self.mmu = MMU()
+        self.arquivo_saida = arquivo_saida
 
     def adicionar_particao(self, pid: str, base: int, lim: int):
+        '''
+        '''
         self.tab_particao.append([pid, base, lim])
     
     def remover_particao(self, pid: str):
+        '''
+        '''
         for i in range(len(self.tab_particao)):
             if self.tab_particao[i][0] == pid:
                 self.tab_particao.pop(i)
+    
+    def buddy_particao():
+        pass
 
 class MMU:
     #def __init__(self, memoria, tab_particao, lista_processos):
@@ -25,17 +34,23 @@ class MMU:
     @staticmethod
     #sera que assim nao resolve? pq com o while acho que ia ficar muito maior o codigo
     def traduz(pid: str, end_virtual: int, memoria: Memoria):
+        '''
+        '''
         for particao in memoria.tab_particao:
             if particao[0] == pid:
                 base = particao[1]
                 limite = particao[2]
                 if end_virtual >= limite:
-                    print('Segmentation Fault')
+                    memoria.arquivo_saida.write(f"Segmentation Fault {pid} {end_virtual}" + '\n')
                     return None
-                return base + end_virtual
+                memoria.arquivo_saida.write(f"acesso {pid} {end_virtual} {base + end_virtual}" + '\n')
+                return None
+        
         
 class processo:
     def __init__(self, pid: str, tamanho: int):
+        '''
+        '''
         self.PID = pid
         self.tamanho = tamanho
 
@@ -63,29 +78,36 @@ def ler_arquivo(caminho: str):
 
 
 def first(operacoes: list, memoria: Memoria):
+    '''
+    '''
     logs = []
     for op in operacoes:
-        print(op)
         if op[0] == 'aloca':
-            pid = op[1]
-            tam = int(op[2])
-            first_aloca(pid, tam, memoria)
+            #pid = op[1]
+            #tam = int(op[2])
+            first_aloca(op[1], int(op[2]), memoria)
 
-            particao = memoria.tab_particao[-1] #pega a ultima particao
-            inicio = particao[1]
-            fim = inicio + particao[2] - 1
-            logs.append(formata_saida('aloca', pid, inicio, fim))
+            #particao = memoria.tab_particao[-1] #pega a ultima particao
+            #inicio = particao[1]
+            #fim = inicio + particao[2] - 1
+            #logs.append(formata_saida('aloca', pid, inicio, fim))
         elif op[0] == 'acessa': 
             memoria.mmu.traduz(op[1], int(op[2]), memoria)
+            #logs.append(formata_saida('acesso', op[1], int(op[2]), int(op[2])))
         else:
             verifica_libera(op[1], memoria)
-    return logs
+            #logs.append(formata_saida('libera', op[1], 0, 0))
+    #return logs
 
 
 def first_acessa(pid: str, end_virtual: int, memoria: Memoria):
+    '''
+    '''
     memoria.mmu.traduz(pid, end_virtual, memoria.trab_particao)
 
 def first_aloca(pid: str, tamanho: int, memoria: Memoria):
+    '''
+    '''
     if not memoria.tab_particao:
         alocacao(0, tamanho, pid, memoria) # aloca no comeco
     else:
@@ -114,8 +136,12 @@ def alocacao(inicio: int, tamanho: int, pid: str, memoria: Memoria):
         memoria.mem[i] = pid
     memoria.adicionar_particao(pid, inicio, tamanho)
     print(memoria.tab_particao)
+    memoria.arquivo_saida.write(f"alocacao {pid} {inicio} {inicio+tamanho-1}" + '\n')
+    #logs.append(formata_saida('aloca', pid, inicio, inicio + tamanho))
 
 def verifica_espaco(memoria: Memoria):
+    '''
+    '''
     #tab_part [[pid, inicio, tamanho]]
     #espaco [[inicio, tamanho]]
     espacos = []
@@ -128,15 +154,14 @@ def verifica_espaco(memoria: Memoria):
             espaco = tab_part[i][1] - (tab_part[i-1][1] + tab_part[i-1][2])
             if espaco != 0:
                 espacos.append([(tab_part[i-1][1] + tab_part[i-1][2]), espaco])
-    inicio_ultimo = tab_part[len(tab_part) - 1][1] + tab_part[len(tab_part) - 1][2]
-    i = inicio_ultimo
-    while i < memoria.tam and memoria.mem[i] == -1:
-        i += 1
-    if i != inicio_ultimo:
-        espacos.append([inicio_ultimo, i])
+    termino = tab_part[len(tab_part) - 1][1] + tab_part[len(tab_part) - 1][2]
+    tamanho_final = memoria.tam - termino
+    espacos.append([termino, tamanho_final])
     return espacos
 
 def verifica_libera(pid: str, memoria: Memoria):
+    '''
+    '''
     i = 0
     achou = False
     while i < len(memoria.tab_particao) and not achou:
@@ -145,14 +170,20 @@ def verifica_libera(pid: str, memoria: Memoria):
         else:
             i += 1
     if achou:
-        first_libera(memoria, i)
+        libera(memoria, i)
 
-def first_libera(memoria: Memoria, posicao: int):
+def libera(memoria: Memoria, posicao: int):
+    '''
+    '''
     for i in range (memoria.tab_particao[posicao][1], memoria.tab_particao[posicao][1] + memoria.tab_particao[posicao][2]):
-        memoria.mem[i] = -1
+        memoria.mem[i] = 0
+    memoria.arquivo_saida.write(f"liberacao {memoria.tab_particao[posicao][0]} {memoria.tab_particao[posicao][1]} {memoria.tab_particao[posicao][1] + memoria.tab_particao[posicao][2] - 1}" + '\n')
     del memoria.tab_particao[posicao]
+    
 
 def worst(operacoes: list, memoria: Memoria):
+    '''
+    '''
     for op in operacoes:
         if op[0] == 'aloca':
             worst_aloca(op[1], int(op[2]), memoria)
@@ -162,6 +193,8 @@ def worst(operacoes: list, memoria: Memoria):
             verifica_libera(op[1], memoria)
 
 def worst_aloca(pid: str, tamanho: int, memoria: Memoria):
+    '''
+    '''
     if not memoria.tab_particao:
         alocacao(0, tamanho, pid, memoria) #aloca no comeco
     else:
@@ -178,6 +211,8 @@ def worst_aloca(pid: str, tamanho: int, memoria: Memoria):
             alocacao(inicio, tamanho, pid, memoria) #aloca no final
     
 def best(operacoes: list, memoria: Memoria):
+    '''
+    '''
     for op in operacoes:
         if op[0] == 'aloca':
             best_aloca(op[1], int(op[2]), memoria)
@@ -189,6 +224,8 @@ def best(operacoes: list, memoria: Memoria):
     pass
 
 def best_aloca(pid: str, tamanho: int, memoria: Memoria):
+    '''
+    '''
     if not memoria.tab_particao:
         alocacao(0, tamanho, pid, memoria) #aloca no comeco
     else:
@@ -205,16 +242,31 @@ def best_aloca(pid: str, tamanho: int, memoria: Memoria):
             alocacao(inicio, tamanho, pid, memoria) #aloca no final
 
 def buddy():
+    '''
+    '''
+    for op in operacoes:
+        if op[0] == 'aloca':
+            buddy_aloca(op[1], int(op[2]), memoria)
+        elif op[0] == 'acessa': 
+            memoria.mmu.traduz(op[1], int(op[2]), memoria)
+        else:
+            buddy_libera(op[1], memoria)
     # muita coisa
-    pass
 
-def acessa_memoria(memoria: Memoria, MMU: MMU, pid: str, end_virtual: int):
-    end_fisico = MMU.traduz(pid, end_virtual)
-    if end_fisico is not None:
-        conteudo = memoria.memoria[end_fisico]
-        print(f"O conteúdo da memória RAM nessa posição é {conteudo}")
+def buddy_aloca(pid: str, tamanho: int, memoria: Memoria):
+    '''
+    '''
+    if not memoria.tab_particao:
+        # [4096]
+        # [2048] [2048]
+        # [1024] [1024] [2048]
+        # [512][512][1024][2048]
+        # 
+        
     else:
-        print("Erro")
+        espacos = verifica_espaco(memoria)
+        espacos.sort(key=lambda x: x[1])
+        
         
 def saida_arquivo(caminho: str, saida: list):
     '''
@@ -230,6 +282,8 @@ def saida_arquivo(caminho: str, saida: list):
             arq.write(linha + '\n')
  
 def formata_saida(operacao: str, pid: str, inicio: int, fim: int):
+    '''
+    '''
     if operacao == 'aloca':
         linha = f"alocacao {pid} {inicio} {fim}"
     elif operacao == 'libera':
@@ -248,22 +302,24 @@ def main():
     pids = arq [1]
     operacoes = arq [2:]
     
-    memoria = Memoria(4096)
-    logs = []
     
-    if estrategia == 'first':
-        logs = first(operacoes, memoria)
-        print(memoria.mem[:1000])
-    elif estrategia == 'worst':
-        worst(operacoes, memoria)
-        print(memoria.mem[:1000])
-    elif estrategia == 'best':
-        best(operacoes, memoria)
-        print(memoria.mem[:1000])
-    elif estrategia == 'buddy':
-        pass
-    else:
-        print('Erro')
+    #logs = []
+    
+    with open(caminho_saida, "a") as arquivo:
+        memoria = Memoria(4096, arquivo)
+        if estrategia == 'first':
+            #first(operacoes, memoria)
+        elif estrategia == 'worst':
+            worst(operacoes, memoria)
+            #print(memoria.mem[:1000])
+        elif estrategia == 'best':
+            best(operacoes, memoria)
+            #print(memoria.mem[:1000])
+        elif estrategia == 'buddy':
+            #buddy(operacoes, memoria)
+            pass
+        else:
+            print('Erro')
     #salvar_saida(linha, tarefas, caminho_saida)
 
     #arg 1 = estrategia de alocacao
@@ -272,9 +328,30 @@ def main():
     #Inicialização da memória RAM, dos processos e da tabela de partição
     #Tratamento de requisições - escrita no arquivo de log de saída
     #Encerramento da simulação' 
-
-    if logs:
-        saida_arquivo(caminho_saida, logs)
+3
+    #if logs:
+     #   saida_arquivo(caminho_saida, logs)
 
 if __name__ == '__main__':
     main()
+
+    #for i in range(1, 10):
+     #   try:
+      #      plotar_linha_temporal(f"entrada{i}.txt", f"log_entrada{i}_{estrategia}.txt")
+       # except FileNotFoundError:
+        #    print(f"Arquivo cenario{i}.csv não encontrado. Pulando...")
+
+            
+#def registrar_log_auxiliar(arquivo_aberto, mensagem):
+ #   # A função recebe o arquivo e escreve nele normalmente
+  #  arquivo_aberto.write(f"[FUNÇÃO] {mensagem}\n")
+
+# Escopo principal
+#with open("meu_log.txt", "w") as arquivo:
+ #   for i in range(5):
+  #      resultado = i * 2
+   #     arquivo.write(f"Iteração {i}: resultado={resultado}\n")
+        
+        # Chamando a função e passando o arquivo como argumento
+    #    if resultado > 4:
+     #       registrar_log_auxiliar(arquivo, f"Aviso: resultado {resultado} é maior qu
