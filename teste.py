@@ -6,7 +6,6 @@ espacos = [[-1, 0, 4096]]
 tamanho_arquivo = 500
 tamanho_particao = int(2 ** math.ceil(math.log2(tamanho_arquivo)))
 
-
 i = 0 
 while i < len(espacos) and espacos[i][0] != -1:#aqui eu acho o primeiro espaço disponivel
     i += 1
