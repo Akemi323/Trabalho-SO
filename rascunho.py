@@ -33,7 +33,6 @@ class Memoria:
 class MMU:
         
     @staticmethod
-    #sera que assim nao resolve? pq com o while acho que ia ficar muito maior o codigo
     def traduz(pid: str, end_virtual: int, memoria: Memoria):
         '''
         Método que realiza a tradução de um endereço virtual em um endereço lógico,
@@ -88,9 +87,52 @@ def first(operacoes: list, memoria: Memoria):
         elif op[0] == 'acessa': 
             memoria.mmu.traduz(op[1], int(op[2]), memoria)
         else:
-            busca_libera(op[1], memoria)
+            libera(op[1], memoria)
+
+
+def busca_first(tamanho: int, memoria: Memoria):
+    for i in range(len(memoria.tab_particao)):  
+        if memoria.tab_particao[i].pid == -1 and memoria.tab_particao[i].tamanho >= tamanho:
+            return i
+    return -1
 
 def first_aloca(pid: str, tamanho: int, memoria: Memoria):
+    '''
+    Função que realiza a alocação da estratégia first fit
+    Considera os seguintes casos
+    1. Fazer a alocação no início da memória
+    2. Fazer a alocação no meio da memória
+    3. Fazer a alocação no final da memória
+
+    [-1, 0, 256], [p01, 256, ...]
+    '''
+    if len(memoria.tab_particao) == 1:
+        if memoria.tab_particao[0].pid == -1 and tamanho <= memoria.tam:
+            alocacao(0, tamanho, pid, memoria) # aloca no comeco
+        else:
+            print("erro")
+    else:
+        posicao = busca_first(tamanho, memoria)
+        if posicao == -1:
+            print("erro")
+        else:
+            alocacao(posicao, tamanho, pid, memoria) #aloca no espaco que achou
+
+def worst(operacoes: list, memoria: Memoria):
+    '''
+    Função que organiza o método de alocação worst, fazendo a chamada de função de cada
+    uma das operações a serem realizadas: Acesso, Alocação e Liberação 
+    '''
+    for op in operacoes:
+        if op[0] == 'aloca':
+            worst_aloca(op[1], int(op[2]), memoria)
+        elif op[0] == 'acessa': 
+            memoria.mmu.traduz(op[1], int(op[2]), memoria)
+        else:
+            libera(op[1], memoria)
+
+
+def worst_aloca(pid: str, tamanho: int, memoria: Memoria):
     '''
     Função que realiza a alocação da estratégia first fit
     Considera os seguintes casos
@@ -104,58 +146,17 @@ def first_aloca(pid: str, tamanho: int, memoria: Memoria):
         else:
             print("erro")
     else:
-        espacos = verifica_espaco(memoria)
-        i = 0
-        achou = False
-        while i < len(espacos) and not achou:
-            if tamanho <= espacos[i][1]:
-                achou = True
-            else:
-                i += 1
-        if achou:
-            alocacao(espacos[i][0], tamanho, pid, memoria) #aloca no espaco que achou
-        else:
-            ultimo = (len(memoria.tab_particao) - 1)
-            inicio = memoria.tab_particao[ultimo][1] + memoria.tab_particao[ultimo][2]
-            alocacao(inicio, tamanho, pid, memoria) #aloca no final
-
-def worst(operacoes: list, memoria: Memoria):
-    '''
-    Função que organiza o método de alocação worst, fazendo a chamada de função de cada
-    uma das operações a serem realizadas: Acesso, Alocação e Liberação 
-    '''
-    for op in operacoes:
-        if op[0] == 'aloca':
-            worst_aloca(op[1], int(op[2]), memoria)
-        elif op[0] == 'acessa': 
-            memoria.mmu.traduz(op[1], int(op[2]), memoria)
-        else:
-            busca_libera(op[1], memoria)
-
-def worst_aloca(pid: str, tamanho: int, memoria: Memoria):
-    '''
-    Função que realiza a alocação da estratégia worst fit
-    Considera os seguintes casos
-    1. Fazer a alocação no início da memória
-    2. Fazer a alocação no meio da memória
-    3. Fazer a alocação no final da memória
-    '''
-    if len(memoria.tab_particao) == 1:
-        if memoria.tab_particao[0].pid == -1 and tamanho <= memoria.tam:
-            alocacao(0, tamanho, pid, memoria) # aloca no comeco
+        maior_pos = -1
+        maior_tam = -1
+        for i in range(len(memoria.tab_particao)):
+            if memoria.tab_particao[i].pid == -1 and memoria.tab_particao[i].tamanho >= tamanho:
+                if memoria.tab_particao[i].tamanho > maior_tam:
+                    maior_pos = i
+                    maior_tam = memoria.tab_particao[i].tamanho
+        if maior_pos != -1:
+            alocacao(maior_pos, tamanho, pid, memoria) #aloca no maior espaço
         else:
             print("erro")
-    else:
-        espacos = verifica_espaco(memoria)
-        espacos.sort(key=lambda x: x[1], reverse=True)
-        if  espacos and tamanho <= espacos[0][1]:
-            alocacao(espacos[0][0], tamanho, pid, memoria)
-            #entra aqui
-        else:
-            #final
-            ultimo = (len(memoria.tab_particao) - 1)
-            inicio = memoria.tab_particao[ultimo][1] + memoria.tab_particao[ultimo][2]
-            alocacao(inicio, tamanho, pid, memoria) #aloca no final
 
 def best(operacoes: list, memoria: Memoria):
     '''
@@ -168,17 +169,17 @@ def best(operacoes: list, memoria: Memoria):
         elif op[0] == 'acessa': 
             memoria.mmu.traduz(op[1], int(op[2]), memoria)
         else:
-            busca_libera(op[1], memoria)
-    # Aloca no menor espaço disponivel (frag externa)
-    pass
+            libera(op[1], memoria)
 
 def best_aloca(pid: str, tamanho: int, memoria: Memoria):
     '''
-    Função que realiza a alocação da estratégia best fit
+    Função que realiza a alocação da estratégia first fit
     Considera os seguintes casos
     1. Fazer a alocação no início da memória
     2. Fazer a alocação no meio da memória
     3. Fazer a alocação no final da memória
+
+    [-1, 0, 256], [p01, 256, ...]
     '''
     if len(memoria.tab_particao) == 1:
         if memoria.tab_particao[0].pid == -1 and tamanho <= memoria.tam:
@@ -186,76 +187,77 @@ def best_aloca(pid: str, tamanho: int, memoria: Memoria):
         else:
             print("erro")
     else:
-        espacos = verifica_espaco(memoria)
-        espacos.sort(key=lambda x: x[1])
-        if  espacos and tamanho <= espacos[0][1]:
-            alocacao(espacos[0][0], tamanho, pid, memoria)
-            #entra aqui
+        menor_pos = float("inf")
+        menor_tam = float("inf")
+        for i in range(len(memoria.tab_particao)):
+            if memoria.tab_particao[i].pid == -1 and memoria.tab_particao[i].tamanho >= tamanho:
+                if memoria.tab_particao[i].tamanho > menor_tam:
+                    menor_pos = i
+                    menor_tam = memoria.tab_particao[i].tamanho
+        if menor_pos != -1:
+            alocacao(menor_pos, tamanho, pid, memoria) #aloca no menor espaço
         else:
-            #final
-            ultimo = (len(memoria.tab_particao) - 1)
-            inicio = memoria.tab_particao[ultimo][1] + memoria.tab_particao[ultimo][2]
-            alocacao(inicio, tamanho, pid, memoria) #aloca no final
+            print("erro")
 
-
-def alocacao(inicio: int, tamanho: int, pid: str, memoria: Memoria):  
+def alocacao(posicao: int, tamanho: int, pid: str, memoria: Memoria):  
     '''
     Função que aloca o processo na memória e atualiza a tabela de partição
     '''
-    # 
-    memoria.mem[inicio:inicio+tamanho] = [pid] * tamanho
-    memoria.adicionar_particao(pid, inicio, tamanho)
-    memoria.arquivo_saida.write(f"alocacao {pid} {inicio} {inicio+tamanho-1}" + '\n')
-
+    base = memoria.tab_particao[posicao].base  
     
+    if tamanho < memoria.tab_particao[posicao].tamanho:
+        restante = memoria.tab_particao[posicao].tamanho - tamanho
+        memoria.tab_particao.insert(posicao+1, processo(-1, base + tamanho, restante))
+    memoria.mem[base:base+tamanho] = [pid] * tamanho
+    memoria.tab_particao[posicao] = processo(pid, base, tamanho)
+    memoria.arquivo_saida.write(f"alocacao {pid} {base} {base+tamanho-1}" + '\n')
 
-
-def verifica_espaco(memoria: Memoria):
-    '''
-    Função que gera uma lista com os espaços disponíveis para a alocação
-    '''
-    espacos = []
-    tab_part = memoria.tab_particao
-    tab_part.sort(key=lambda x: x.base) #ordenar pelos inicios para fazer as comparações
-    if len(tab_part) > 0: #se tiver algo na tabela de particão
-        if tab_part[0].base != 0: 
-            espacos.append([0, tab_part[0].base])
-        for i in range(1, len(memoria.tab_particao)):
-            espaco = tab_part[i].base - (tab_part[i-1].base + tab_part[i-1].tamanho)
-            if espaco != 0:
-                espacos.append([(tab_part[i-1].base + tab_part[i-1].tamanho), espaco])
-    termino = tab_part[len(tab_part) - 1].base + tab_part[len(tab_part) - 1].tamanho
-    tamanho_final = memoria.tam - termino
-    espacos.append([termino, tamanho_final])
-    return espacos
+    print(memoria.tab_particao)
 
 def busca_libera(pid: str, memoria: Memoria):
     '''
     Função que busca o processo que será liberado do disco
     '''
-    i = 0
-    achou = False
-    while i < len(memoria.tab_particao) and not achou:
-        if pid == memoria.tab_particao[i].pid:
-            achou = True
-        else:
-            i += 1
-    if achou:
-        libera(memoria, i)
+    for i in range(len(memoria.tab_particao)):
+        if memoria.tab_particao[i].pid == pid:
+            return i
+    return -1
 
-def libera(memoria: Memoria, pos: int):
+
+def libera(pid: int, memoria: Memoria):
     '''
     Funcao que realiza a remoção de determinado processo do disco
     Ela passa um for que zera todas os índices que o processo ocupava
     '''
-    tab_particao = memoria.tab_particao
-    tab_part_rem = tab_particao.pop(pos)
-    pid = tab_part_rem.pid
-    base = tab_part_rem.base
-    tam = tab_part_rem.base + tab_part_rem.tamanho
-    
-    memoria.mem[base:base+tam] = [0] * tam
-    memoria.arquivo_saida.write(f"liberacao {pid} {base} {tam - 1}" + '\n')
+
+    posicao = busca_libera(pid, memoria)
+    if posicao != -1:
+        base = memoria.tab_particao[posicao].base
+        tamanho = memoria.tab_particao[posicao].tamanho
+        pid = memoria.tab_particao[posicao].pid
+
+        memoria.mem[base:base+tamanho] = [0] * tamanho
+        memoria.arquivo_saida.write(f"liberacao {pid} {base} {tamanho - 1}" + '\n')
+        memoria.tab_particao[posicao].pid = -1
+
+        antecessor = posicao -1
+
+        if 0 <= antecessor and memoria.tab_particao[antecessor].pid == -1:
+            novo_tamanho = memoria.tab_particao[antecessor].tamanho + tamanho
+            memoria.tab_particao[antecessor].tamanho = novo_tamanho
+            del memoria.tab_particao[posicao]
+            
+            if memoria.tab_particao[posicao].pid == -1:
+                novo_tamanho = memoria.tab_particao[antecessor].tamanho + memoria.tab_particao[posicao].tamanho
+                memoria.tab_particao[antecessor].tamanho = novo_tamanho
+                del memoria.tab_particao[posicao]
+        elif posicao + 1 < len(memoria.tab_particao) and memoria.tab_particao[posicao + 1].pid == -1:
+            novo_tamanho = memoria.tab_particao[posicao + 1].tamanho + memoria.tab_particao[posicao].tamanho
+            memoria.tab_particao[posicao].tamanho = novo_tamanho
+            del memoria.tab_particao[posicao+1]
+        print(memoria.tab_particao)
+    else:
+        print("erro")
 
 def buddy(operacoes: list, memoria: Memoria):
     '''
@@ -327,6 +329,11 @@ def buddy_libera(pid, memoria):
         
         
 def junta_buddy(posicao, memoria):
+    '''
+    Função recursiva que realiza a junção de buddys após a liberação]
+    Se o resto da divisão (base/tamanho) resultar em 1, o buddy junta com o anterior a ele
+    Se não, junta com o seguinte
+    '''
     base = memoria.tab_particao[posicao].base
     tamanho = memoria.tab_particao[posicao].tamanho
     posicao_amigo = (base // tamanho) % 2
@@ -345,11 +352,9 @@ def junta_buddy(posicao, memoria):
 def main():    
     caminho_entrada = sys.argv[1]
     estrategia = sys.argv[2]
-    caminho_saida = "saida.txt"
+    caminho_saida = f"log_{caminho_entrada}_{estrategia}"
 
     arq = ler_arquivo(caminho_entrada)
-    qtd_processos = arq[0]
-    pids = arq [1]
     operacoes = arq [2:]
     
     with open(caminho_saida, "a") as arquivo:
@@ -359,14 +364,11 @@ def main():
             first(operacoes, memoria)
         elif estrategia == 'worst':
             worst(operacoes, memoria)
-            #print(memoria.mem[:1000])
         elif estrategia == 'best':
             best(operacoes, memoria)
-            #print(memoria.mem[:1000])
         elif estrategia == 'buddy':
             buddy(operacoes, memoria)
             print(memoria.mem)
-            #print(memoria.mem[:1000])
             pass
         else:
             print('Erro')
