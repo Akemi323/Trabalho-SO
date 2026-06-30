@@ -1,0 +1,6 @@
+alocacao p01 0 1023
+alocacao p02 1024 2047
+alocacao p03 2048 3071
+liberacao p02 1024 2047
+alocacao p04 1024 1535
+acesso p04 0 1024

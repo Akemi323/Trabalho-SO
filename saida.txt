@@ -1,0 +1,2 @@
+liberacao p01 0 255
+liberacao p03 512 511

@@ -45,9 +45,9 @@ class MMU:
                 base = particao.base
                 limite = particao.tamanho
                 if end_virtual >= limite:
-                    memoria.arquivo_saida.write(f"Segmentation Fault {pid} {end_virtual}" + '\n')
+                    memoria.arquivo_saida.write(f"acesso {pid} {end_virtual} violacao\n")
                     return None
-                memoria.arquivo_saida.write(f"acesso {pid} {end_virtual} {base + end_virtual}" + '\n')
+                memoria.arquivo_saida.write(f"acesso {pid} {end_virtual} {base + end_virtual}\n")
                 return None
         
 class processo:
@@ -114,7 +114,7 @@ def first_aloca(pid: str, tamanho: int, memoria: Memoria):
     else:
         posicao = busca_first(tamanho, memoria)
         if posicao == -1:
-            print("erro")
+            erro_aloca(pid, memoria)
         else:
             alocacao(posicao, tamanho, pid, memoria) #aloca no espaco que achou
 
@@ -156,7 +156,7 @@ def worst_aloca(pid: str, tamanho: int, memoria: Memoria):
         if maior_pos != -1:
             alocacao(maior_pos, tamanho, pid, memoria) #aloca no maior espaço
         else:
-            print("erro")
+            erro_aloca(pid, memoria)
 
 def best(operacoes: list, memoria: Memoria):
     '''
@@ -185,19 +185,19 @@ def best_aloca(pid: str, tamanho: int, memoria: Memoria):
         if memoria.tab_particao[0].pid == -1 and tamanho <= memoria.tam:
             alocacao(0, tamanho, pid, memoria) # aloca no comeco
         else:
-            print("erro")
+            erro_aloca(pid, memoria)
     else:
         menor_pos = float("inf")
         menor_tam = float("inf")
         for i in range(len(memoria.tab_particao)):
             if memoria.tab_particao[i].pid == -1 and memoria.tab_particao[i].tamanho >= tamanho:
-                if memoria.tab_particao[i].tamanho > menor_tam:
+                if memoria.tab_particao[i].tamanho < menor_tam:
                     menor_pos = i
                     menor_tam = memoria.tab_particao[i].tamanho
-        if menor_pos != -1:
+        if menor_pos != float("inf"):
             alocacao(menor_pos, tamanho, pid, memoria) #aloca no menor espaço
         else:
-            print("erro")
+            erro_aloca(pid, memoria)
 
 def alocacao(posicao: int, tamanho: int, pid: str, memoria: Memoria):  
     '''
@@ -214,6 +214,8 @@ def alocacao(posicao: int, tamanho: int, pid: str, memoria: Memoria):
 
     print(memoria.tab_particao)
 
+def erro_aloca(pid: str, memoria: Memoria):
+    memoria.arquivo_saida.write(f'alocacao {pid} erro!\n')
 def busca_libera(pid: str, memoria: Memoria):
     '''
     Função que busca o processo que será liberado do disco
@@ -237,7 +239,7 @@ def libera(pid: int, memoria: Memoria):
         pid = memoria.tab_particao[posicao].pid
 
         memoria.mem[base:base+tamanho] = [0] * tamanho
-        memoria.arquivo_saida.write(f"liberacao {pid} {base} {tamanho - 1}" + '\n')
+        memoria.arquivo_saida.write(f"liberacao {pid} {base} {base + tamanho - 1}" + '\n')
         memoria.tab_particao[posicao].pid = -1
 
         antecessor = posicao -1
@@ -290,9 +292,10 @@ def buddy_aloca(pid: str, tamanho: int, memoria: Memoria):
                 posicao = i
 
     if posicao == -1:
-        print(f"Erro: Não há espaço em memória utilizando o sistema Buddy para o processo {pid}.")
+        erro_aloca(pid, memoria)
         return
-
+    
+    memoria.arquivo_saida.write(f'alocacao {pid} {memoria.tab_particao[posicao].base} {memoria.tab_particao[posicao].base + tamanho_particao - 1}\n')
     while tamanho_particao < menor:
         menor = int(memoria.tab_particao[posicao].tamanho / 2)
         memoria.tab_particao[posicao] = processo(-1, memoria.tab_particao[posicao].base, menor)
@@ -324,7 +327,7 @@ def buddy_libera(pid, memoria):
         memoria.tab_particao[posicao].pid = -1
         
         memoria.mem[base:base+tamanho] = [0] * tamanho
-        memoria.arquivo_saida.write(f"liberacao {pid} {base} {tamanho - 1}" + '\n') 
+        memoria.arquivo_saida.write(f"liberacao {pid} {base} {base + tamanho - 1}" + '\n') 
         junta_buddy(posicao, memoria)
         
         
@@ -350,28 +353,70 @@ def junta_buddy(posicao, memoria):
             junta_buddy(posicao, memoria)
 
 def main():    
-    caminho_entrada = sys.argv[1]
-    estrategia = sys.argv[2]
-    caminho_saida = f"log_{caminho_entrada}_{estrategia}"
+    # caminho_entrada = sys.argv[1]
 
-    arq = ler_arquivo(caminho_entrada)
-    operacoes = arq [2:]
+    # estrategia = sys.argv[2]
+    #caminho_saida = f"log_{caminho_entrada}_{estrategia}"
+
+    # arq = ler_arquivo(caminho_entrada)
+    # operacoes = arq [2:]
     
-    with open(caminho_saida, "a") as arquivo:
-        memoria = Memoria(4096, arquivo)
+    # with open(caminho_saida, "a") as arquivo:
+    #     memoria = Memoria(4096, arquivo)
+# 
+    #     if estrategia == 'first':
+    #         first(operacoes, memoria)
+    #     elif estrategia == 'worst':
+    #         worst(operacoes, memoria)
+    #     elif estrategia == 'best':
+    #         best(operacoes, memoria)
+    #     elif estrategia == 'buddy':
+    #         buddy(operacoes, memoria)
+    #         print(memoria.mem)
+    #         pass
+    #     else:
+    #         print('Erro')
+            
+    estrategia = sys.argv[1]
 
-        if estrategia == 'first':
-            first(operacoes, memoria)
-        elif estrategia == 'worst':
-            worst(operacoes, memoria)
-        elif estrategia == 'best':
-            best(operacoes, memoria)
-        elif estrategia == 'buddy':
-            buddy(operacoes, memoria)
-            print(memoria.mem)
-            pass
-        else:
-            print('Erro')
+    # Mudamos o range de (1, 13) para ler do 1 até o 12!
+    for i in range(1, 13):
+        try:
+            # Garante que números menores que 10 fiquem como '001', '002' e de 10 para cima fiquem '010', '011', '012'
+            if i < 10:
+                nome_arquivo = f"entrada00{i}.txt"
+            else:
+                nome_arquivo = f"entrada0{i}.txt"
+        
+            # Monta o caminho correto para ler da pasta de entradas
+            entrada = os.path.join("exemplos_entrada", nome_arquivo)
+            
+            # Monta o caminho do log de saídas
+            caminho_saida = os.path.join("saidas_teste", f"log_{nome_arquivo}_{estrategia}")
+            
+            print(f"Lendo de: {entrada}")
+            print(f"Salvando log em: {caminho_saida}")
+
+            arq = ler_arquivo(entrada)
+            operacoes = arq[2:]
+            
+            with open(caminho_saida, "a") as arquivo:
+                memoria = Memoria(4096, arquivo)
+
+                if estrategia == 'first':
+                    first(operacoes, memoria)
+                elif estrategia == 'worst':
+                    worst(operacoes, memoria)
+                elif estrategia == 'best':
+                    best(operacoes, memoria)
+                elif estrategia == 'buddy':
+                    buddy(operacoes, memoria)
+                else:
+                    print('Estratégia inválida!')
+                    
+        except FileNotFoundError:
+            # Corrigido o print de erro para mostrar o caminho real tentado pelo Python
+            print(f"Arquivo {entrada} não encontrado na pasta. Pulando...")
 
 if __name__ == '__main__':
     main()
