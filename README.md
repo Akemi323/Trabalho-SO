@@ -1,6 +1,7 @@
 # Simulador de Gestão de Memória - Sistemas Operacionais
 
-Trabalho prático desenvolvido para a disciplina 12035 - Sistemas Operacionais (DIN/UEM) .
+Trabalho prático desenvolvido para a disciplina 12035 - Sistemas Operacionais (DIN/UEM)
+
 Professor: Dr. Alisson Renan Svaigen 
 
 ## Autores
