@@ -14,10 +14,10 @@ Professor: Dr. Alisson Renan Svaigen
 
 ## Como Executar
 
-O sistema deve ser executado via terminal passando a estratégia de alocação como primeiro argumento e o caminho do arquivo de entrada como segundo argumento :
+O sistema deve ser executado via terminal passando o arquivo de entrada como primeiro argumento e a estratégia como segundo:
 
 ```bash
-python Trabalho_SO.py <estrategia> <caminho_arquivo_entrada>
+python Trabalho_SO.py *arquivo_entrada* *estrategia* 
 ```
 
 As opções válidas para a estratégia são: `first`, `best`, `worst` ou `buddy` .
