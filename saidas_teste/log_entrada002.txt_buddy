@@ -1,5 +1,0 @@
-alocacao abc 0 2047
-alocacao def 2048 3071
-liberacao abc 0 2047
-alocacao ghi 0 2047
-acesso ghi 500 500

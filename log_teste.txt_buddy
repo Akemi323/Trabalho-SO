@@ -1,6 +1,0 @@
-alocacao p01 0 256
-alocacao p02 256 128
-alocacao p03 512 512
-liberacao p01 0 255
-liberacao p03 512 511
-alocacao p04 0 256
